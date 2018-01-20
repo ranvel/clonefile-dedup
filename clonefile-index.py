@@ -6,6 +6,7 @@ from os.path import isfile, join
 conn = sqlite3.connect('index.sqlite')
 
 def processFile(filelink):
+	# Don't worry about tiny files:
 	if (os.path.getsize(filelink) > 1024):
 		print(filelink)
 		shahash = getSHA256(filelink).split()[0]
@@ -16,9 +17,11 @@ def processFile(filelink):
 
 def getSHA256(currentFile):
 	#Using commandline `shasum` because I couldn't get the same performance out of python's hashlib 
+	#Removing the '-a 256' parameter is probably a lot faster, but maybe less safe?
 	result = subprocess.run(['shasum', '-a', '256', currentFile], stdout=subprocess.PIPE)
 	return result.stdout
 
+# Index all files from within the root
 for dirpath, dirnames, filenames in os.walk("."):
 	for filename in [f for f in filenames]:
 		filelink =  os.path.join(dirpath, filename)

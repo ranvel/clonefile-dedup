@@ -21,6 +21,7 @@ with conn:
 			chksum = chksumRaw.stdout.split()[0].decode("utf-8")
 			print("Original checksum: \t \t "+ result[0])
 			print("New file: \t \t \t "+ chksum)			
+			# I should probably add some logic here to ignore Spotlight search files. 
 			if chksum == result[0]:
 				print("\033[1;32mVerified!!\033[1;m")
 			else:
