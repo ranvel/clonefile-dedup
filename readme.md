@@ -1,5 +1,7 @@
 ## 'clonefile' deduplication
 
+![](b&a.png) 
+
 This is a rough project that I wanted to do to ensure that I wasn't wasting space by having deplicate files on my drives. YMMV and it is largely untested and so I caution potenial users to review the code and run tests before running this on your full drive, as it could possibly result in data loss. 
 
 Normal deduplication is done at the block level and requires a special filesystem such as zfs as well as enormous amounts of memory to store the checksums. This script aims to catalog all of your files with the sha-256 algorithm and then deduplicate any files with matching signatures. 
