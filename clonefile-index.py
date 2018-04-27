@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import os, subprocess, sqlite3
+import os, sqlite3, hashlib
 from os import listdir
 from os.path import isfile, join
+from multiprocessing import Pool
 
 conn = sqlite3.connect('index.sqlite')
 c = conn.cursor()
@@ -12,22 +13,36 @@ def processFile(filelink):
 	if (os.path.getsize(filelink) > 1024):
 		print(filelink)
 		shahash = getSHA256(filelink).split()[0]
-		print(shahash.decode("utf-8"))
-		c.execute("INSERT INTO files (file, chksum) VALUES ('"+filelink.replace('\'', "\'\'") +"', '"+shahash.decode("utf-8")+"');")
+		print(shahash)
+		c.execute("INSERT INTO files (file, chksum) VALUES ('"+filelink.replace('\'', "\'\'") +"', '"+shahash+"');")
 		conn.commit()
 		print("\n")
 
 def getSHA256(currentFile):
-	#Using commandline `shasum` because I couldn't get the same performance out of python's hashlib 
-	#Removing the '-a 256' parameter is probably a lot faster, but maybe less safe?
-	result = subprocess.run(['shasum', '-a', '256', currentFile], stdout=subprocess.PIPE)
-	return result.stdout
+	#Read the 64k at a time, hash the buffer & repeat till finished. 
+	BLOCKSIZE = 65536
+	hasher = hashlib.sha256()
+	with open(currentFile, 'rb') as file:
+		buf = file.read(BLOCKSIZE)
+		while len(buf) > 0:
+			hasher.update(buf)
+			buf = file.read(BLOCKSIZE)
+	return hasher.hexdigest()
 
 # Index all files from within the root
-for dirpath, dirnames, filenames in os.walk("."):
-	for filename in [f for f in filenames]:
-		filelink =  os.path.join(dirpath, filename)
-		if (isfile(filelink)):
-			processFile(filelink)
+#start script
+if __name__ == '__main__':
+	allfiles = []
+	print("Indexing files in root")
+	for dirpath, dirnames, filenames in os.walk("."):
+		for filename in [f for f in filenames]:
+			filelink =  os.path.join(dirpath, filename)
+			if (isfile(filelink)):
+				allfiles.append(filelink)
+	# 6 at a time, multiprocess delegation
+	print("Processing " + str(len(allfiles)) + " files")
+	with Pool(6) as pool:
+		# parallel process "sleepTest", using the workload "workPool" as an argument AND as the tasks to divide up.
+		pool.map(processFile, allfiles, chunksize = 1)
 
 conn.close()
