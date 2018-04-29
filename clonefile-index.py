@@ -4,19 +4,30 @@ from os import listdir
 from os.path import isfile, join
 from multiprocessing import Pool
 
+print("""
+	This will index your files. How many processor threads would you like to use?
+	This command will show you your the maximum number you should use: sysctl hw.logicalcpu
+	""")
+threads = input("Number of Threads to use: ")
+
 conn = sqlite3.connect('index.sqlite')
 c = conn.cursor()
 c.execute('''CREATE TABLE files (file, chksum)''')
 
 def processFile(filelink):
-	# Don't worry about tiny files:
-	if (os.path.getsize(filelink) > 1024):
-		print(filelink)
-		shahash = getSHA256(filelink).split()[0]
-		print(shahash)
-		c.execute("INSERT INTO files (file, chksum) VALUES ('"+filelink.replace('\'', "\'\'") +"', '"+shahash+"');")
-		conn.commit()
-		print("\n")
+	try: 
+		os.path.getsize(filelink)
+	except:
+		pass
+	else: 
+		# Don't worry about tiny files:
+		if (os.path.getsize(filelink) > 1024):
+			print(filelink)
+			shahash = getSHA256(filelink).split()[0]
+			print(shahash)
+			c.execute("INSERT INTO files (file, chksum) VALUES ('"+filelink.replace('\'', "\'\'") +"', '"+shahash+"');")
+			conn.commit()
+			print("\n")
 
 def getSHA256(currentFile):
 	#Read the 64k at a time, hash the buffer & repeat till finished. 
@@ -39,9 +50,9 @@ if __name__ == '__main__':
 			filelink =  os.path.join(dirpath, filename)
 			if (isfile(filelink)):
 				allfiles.append(filelink)
-	# 6 at a time, multiprocess delegation
+	# "threads" at a time, multiprocess delegation
 	print("Processing " + str(len(allfiles)) + " files")
-	with Pool(6) as pool:
+	with Pool(int(threads)) as pool:
 		# parallel process "sleepTest", using the workload "workPool" as an argument AND as the tasks to divide up.
 		pool.map(processFile, allfiles, chunksize = 1)
 
