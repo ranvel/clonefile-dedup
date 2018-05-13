@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os, sqlite3, subprocess
 
 conn = sqlite3.connect('index.sqlite')
