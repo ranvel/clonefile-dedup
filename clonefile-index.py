@@ -10,7 +10,7 @@ print("""
 	""")
 threads = input("Number of Threads to use: ")
 
-conn = sqlite3.connect('index.sqlite')
+conn = sqlite3.connect('clonefile-index.sqlite')
 c = conn.cursor()
 c.execute('''CREATE TABLE files (file, chksum)''')
 
