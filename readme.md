@@ -8,7 +8,7 @@ Normal deduplication is done at the block level and requires a special filesyste
 
 You'll need:
  - python 3.6
- - python sqlite3 module
+ - python sqlite3 & tqdm module
  - a Mac with APFS (to utilize the clonefile syscall)
 
 This program could easily be combined into one program, but it's not a lot of work to run this as separate scripts, so I will leave it as is. 

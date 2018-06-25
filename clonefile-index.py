@@ -48,7 +48,6 @@ def add2sqlite(fileinfo):
 			file_link = f[0]
 			file_hash = f[1]
 			c.execute("INSERT INTO files (file, chksum) VALUES ('"+file_link.replace('\'', "\'\'") +"', '"+file_hash+"');")
-			conn.commit()
 
 # Index all files from within the root
 #start script
@@ -69,4 +68,5 @@ if __name__ == '__main__':
 	#process (r)esults by adding them to sqlite 
 	add2sqlite(r)
 
+conn.commit()
 conn.close()
