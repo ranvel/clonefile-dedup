@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import os, sqlite3, hashlib
+from tqdm import tqdm
 from os import listdir
 from os.path import isfile, join
 from multiprocessing import Pool
+from pathlib import Path
 
 print("""
 	This will index your files. How many processor threads would you like to use?
@@ -22,12 +24,12 @@ def processFile(filelink):
 	else: 
 		# Don't worry about tiny files:
 		if (os.path.getsize(filelink) > 1024):
-			print(filelink)
-			shahash = getSHA256(filelink).split()[0]
-			print(shahash)
-			c.execute("INSERT INTO files (file, chksum) VALUES ('"+filelink.replace('\'', "\'\'") +"', '"+shahash+"');")
-			conn.commit()
-			print("\n")
+			try:
+				shahash = getSHA256(filelink).split()[0]
+				file_info = [filelink,shahash]
+				return file_info
+			except Exception as e: 
+				print(f"Couldn\'t index {filelink}: {e}")
 
 def getSHA256(currentFile):
 	#Read the 64k at a time, hash the buffer & repeat till finished. 
@@ -40,20 +42,31 @@ def getSHA256(currentFile):
 			buf = file.read(BLOCKSIZE)
 	return hasher.hexdigest()
 
+def add2sqlite(fileinfo):
+	for f in fileinfo:
+		if (f != None):
+			file_link = f[0]
+			file_hash = f[1]
+			c.execute("INSERT INTO files (file, chksum) VALUES ('"+file_link.replace('\'', "\'\'") +"', '"+file_hash+"');")
+			conn.commit()
+
 # Index all files from within the root
 #start script
 if __name__ == '__main__':
 	allfiles = []
-	print("Indexing files in root")
+	sqlite_data = []
+	print(f"Indexing files in {os.getcwd()}")
 	for dirpath, dirnames, filenames in os.walk("."):
 		for filename in [f for f in filenames]:
 			filelink =  os.path.join(dirpath, filename)
 			if (isfile(filelink)):
 				allfiles.append(filelink)
+	num_of_files = len(allfiles)
 	# "threads" at a time, multiprocess delegation
-	print("Processing " + str(len(allfiles)) + " files")
+	print("Processing " + str(num_of_files) + " files")
 	with Pool(int(threads)) as pool:
-		# parallel process "sleepTest", using the workload "workPool" as an argument AND as the tasks to divide up.
-		pool.map(processFile, allfiles, chunksize = 1)
+		r = list(tqdm(pool.imap_unordered(processFile, allfiles), total = num_of_files))
+	#process (r)esults by adding them to sqlite 
+	add2sqlite(r)
 
 conn.close()
