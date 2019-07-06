@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sqlite3, hashlib, json, xattr
+import os, sqlite3, hashlib, json
 from tqdm import tqdm
 from os import listdir
 from os.path import isfile, join
@@ -16,7 +16,7 @@ threads = input("Number of Threads to use: ")
 
 conn = sqlite3.connect('clonefile-index.sqlite')
 c = conn.cursor()
-c.execute('''CREATE TABLE files (file, chksum64k, chksumfull, size, stat, xattr)''')
+c.execute('''CREATE TABLE files (file, chksum64k, chksumfull, size, stat)''')
 
 def processFile(filelink):
 	try: 
@@ -31,7 +31,6 @@ def processFile(filelink):
 				file_info = (
 					filelink, shahash, os.path.getsize(filelink),
 					json.dumps(os.stat(filelink)),
-					json.dumps(dict(xattr.xattr(filelink))),
 				)
 				return file_info
 			except Exception as e: 
@@ -60,12 +59,12 @@ def add2sqlite(fileinfo):
 		if (f != None):
 			if f[2]>BLOCKSIZE:
 				c.execute(
-					"INSERT INTO files (file, chksum64k, chksumfull, size, stat, xattr) VALUES (?,?,?,?,?,?)",
-					(f[0], f[1], '',   f[2], f[3], f[4]))
+					"INSERT INTO files (file, chksum64k, chksumfull, size, stat) VALUES (?,?,?,?,?)",
+					(f[0], f[1], '',   f[2], f[3]) )
 			else:
 				c.execute(
-					"INSERT INTO files (file, chksum64k, chksumfull, size, stat, xattr) VALUES (?,?,?,?,?,?)",
-					(f[0], f[1], f[1], f[2], f[3], f[4]))
+					"INSERT INTO files (file, chksum64k, chksumfull, size, stat) VALUES (?,?,?,?,?)",
+					(f[0], f[1], f[1], f[2], f[3]) )
 
 # Index all files from within the root
 #start script
