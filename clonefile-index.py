@@ -2,7 +2,7 @@
 import os, sqlite3, hashlib, json
 from tqdm import tqdm
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, islink, join
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -75,8 +75,8 @@ if __name__ == '__main__':
 	print(f"Reading file list")
 	for dirpath, dirnames, filenames in os.walk("."):
 		for filename in [f for f in filenames]:
-			filelink =  os.path.join(dirpath, filename)
-			if (isfile(filelink)):
+			filelink = os.path.abspath(os.path.join(dirpath, filename))
+			if isfile(filelink) and not islink(filelink):
 				allfiles.append(filelink)
 	num_of_files = len(allfiles)
 	# "threads" at a time, multiprocess delegation

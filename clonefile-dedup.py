@@ -19,7 +19,11 @@ with conn:
 		fileIndex = 0 
 		#For the first one, treat this as the original even though it doesn't matter which one you use. 
 		for dupesResult in dupesResults:
-			if fileIndex == 0: 
+			if not os.path.isfile(dupesResult[0]):
+				continue
+			if os.path.islink(dupesResult[0]):
+				continue
+			if fileIndex == 0:
 				print(f"Original file: {dupesResult[0]}    size {os.path.getsize(dupesResult[0])}")
 				originalFile = dupesResult[0]
 			else:
