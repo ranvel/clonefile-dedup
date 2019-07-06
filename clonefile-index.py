@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-import os, sqlite3, hashlib
+import os, sqlite3, hashlib, json, xattr
 from tqdm import tqdm
 from os import listdir
 from os.path import isfile, join
 from multiprocessing import Pool
 from pathlib import Path
+
+BLOCKSIZE = 65536
 
 print("""
 	This will index your files. How many processor threads would you like to use?
@@ -14,7 +16,7 @@ threads = input("Number of Threads to use: ")
 
 conn = sqlite3.connect('clonefile-index.sqlite')
 c = conn.cursor()
-c.execute('''CREATE TABLE files (file, chksum64k, chksumfull, size)''')
+c.execute('''CREATE TABLE files (file, chksum64k, chksumfull, size, stat, xattr)''')
 
 def processFile(filelink):
 	try: 
@@ -26,20 +28,23 @@ def processFile(filelink):
 		if (os.path.getsize(filelink) > 1024):
 			try:
 				shahash = getSHA256(filelink).split()[0]
-				file_info = [filelink,shahash,os.path.getsize(filelink)]
+				file_info = (
+					filelink, shahash, os.path.getsize(filelink),
+					json.dumps(os.stat(filelink)),
+					json.dumps(dict(xattr.xattr(filelink))),
+				)
 				return file_info
 			except Exception as e: 
 				print(f"Couldn\'t index {filelink}: {e}")
 
 def processFileFull(filelink):
 	shahash = getSHA256(filelink, full=True).split()[0]
-	file_info = [shahash,filelink]
+	file_info = (shahash, filelink)
 	return file_info
 
 def getSHA256(currentFile, full=False):
 	#Read the 64k at a time, hash the buffer & repeat till finished. 
 	#By default only checksum the first block
-	BLOCKSIZE = 65536
 	hasher = hashlib.sha256()
 	with open(currentFile, 'rb') as file:
 		buf = file.read(BLOCKSIZE)
@@ -53,7 +58,14 @@ def getSHA256(currentFile, full=False):
 def add2sqlite(fileinfo):
 	for f in fileinfo:
 		if (f != None):
-			c.execute("INSERT INTO files (file, chksum64k, chksumfull, size) VALUES (?,?,'',?)", (f[0], f[1], f[2]))
+			if f[2]>BLOCKSIZE:
+				c.execute(
+					"INSERT INTO files (file, chksum64k, chksumfull, size, stat, xattr) VALUES (?,?,?,?,?,?)",
+					(f[0], f[1], '',   f[2], f[3], f[4]))
+			else:
+				c.execute(
+					"INSERT INTO files (file, chksum64k, chksumfull, size, stat, xattr) VALUES (?,?,?,?,?,?)",
+					(f[0], f[1], f[1], f[2], f[3], f[4]))
 
 # Index all files from within the root
 #start script
@@ -89,7 +101,7 @@ if __name__ == '__main__':
 
 	print(f'Found {len(results)} non-unique checksums, fetching files')
 	for result in tqdm(results):
-		c.execute("SELECT file FROM files WHERE chksum64k = ?", (result[0],))
+		c.execute("SELECT file FROM files WHERE chksum64k = ? AND chksumfull != ''", (result[0],))
 		for f in c.fetchall():
 			allfiles.append(f[0])
 
