@@ -87,7 +87,7 @@ if __name__ == '__main__':
 	allfiles = []
 	sqlite_data = []
 
-	print(f'Found {len(results)} candidates, fetching files')
+	print(f'Found {len(results)} non-unique checksums, fetching files')
 	for result in tqdm(results):
 		c.execute("SELECT file FROM files WHERE chksum64k = ?", (result[0],))
 		for f in c.fetchall():
