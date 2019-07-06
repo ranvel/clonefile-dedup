@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
 	print(f'Found {len(results)} non-unique checksums, fetching files')
 	for result in tqdm(results):
-		c.execute("SELECT file FROM files WHERE chksum64k = ? AND chksumfull != ''", (result[0],))
+		c.execute("SELECT file FROM files WHERE chksum64k = ? AND chksumfull == ''", (result[0],))
 		for f in c.fetchall():
 			allfiles.append(f[0])
 
