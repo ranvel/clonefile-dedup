@@ -115,7 +115,7 @@ if __name__ == '__main__':
 
 	conn.commit()
 	print('Indexing database')
-	c.execute('''CREATE INDEX indexfull ON files(chksum64k ASC, chksumfull ASC)''')
+	c.execute('''CREATE INDEX indexfull ON files(chksumfull ASC)''')
 
 conn.commit()
 conn.close()
