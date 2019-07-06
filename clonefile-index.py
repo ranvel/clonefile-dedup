@@ -94,7 +94,7 @@ if __name__ == '__main__':
 			allfiles.append(f[0])
 
 	num_of_files = len(allfiles)
-	print("Processing {num_of_files} files")
+	print(f"Calculating full checksum for {num_of_files} files")
 	with Pool(int(threads)) as pool:
 		r = list(tqdm(pool.imap_unordered(processFileFull, allfiles), total = num_of_files))
 
