@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os, sqlite3, subprocess, xattr, pickle
 
+cwd = os.path.abspath(os.path.curdir)
 conn = sqlite3.connect('clonefile-index.sqlite')
 
 with conn:
@@ -25,11 +26,22 @@ with conn:
 				fname = dupesResult[0]
 				fnameNew = fname + ".cfdnew"
 				print(f"    replacing: {fname}")
-				# The -c parameter is for the `clonefile`
-				copyCommand = subprocess.run(['cp', '-cv', originalFile, fnameNew], stdout=subprocess.PIPE)
-				#print(copyCommand)
+
 				oldStat = os.stat(fname)
 				oldAttr = dict(xattr.xattr(fname))
+
+				dirName = os.path.abspath(os.path.dirname(fname))
+				oldDirStat = [ ] 
+				
+				d = dirName
+				while d != '/' and d != '' and d != cwd:
+					oldDirStat.append( (d, os.stat(d)) )
+					d = os.path.abspath(os.path.dirname(d))
+
+				# The -c parameter is for the `clonefile`
+				copyCommand = subprocess.run(['cp', '-cvp', originalFile, fnameNew], stdout=subprocess.PIPE)
+				#print(copyCommand)
+
 				newStat = os.stat(fnameNew) 
 				newAttr = dict(xattr.xattr(fnameNew))
 
@@ -52,6 +64,12 @@ with conn:
 				fnameNew = fname
 				newStat = os.stat(fnameNew) 
 				newAttr = dict(xattr.xattr(fnameNew))
+				newDirStat = []
+
+				d = dirName
+				while d != '/' and d != '' and d != cwd:
+					newDirStat.append( (d, os.stat(d)) ) 
+					d = os.path.abspath(os.path.dirname(d))
 
 				# additional fixup, just in case:
 				if newStat.st_uid != oldStat.st_uid or newStat.st_gid != oldStat.st_gid:
@@ -66,6 +84,12 @@ with conn:
 
 				if newStat.st_mtime != oldStat.st_mtime or newStat.st_atime != oldStat.st_atime:
 					os.utime(fnameNew, (oldStat.st_atime, oldStat.st_mtime) )
+
+				for nd,od in zip(newDirStat, oldDirStat):
+					if nd[0] != od[0]:
+						continue
+					if nd[1].st_mtime != od[1].st_mtime or nd[1].st_atime != od[1].st_atime:
+						os.utime(od[0], (od[1].st_atime, od[1].st_mtime) )
 
 			fileIndex += 1
 
