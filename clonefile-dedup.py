@@ -8,11 +8,11 @@ with conn:
 	cur = conn.cursor()    
     
     # Get files with duplicates
-	cur.execute("SELECT chksum, COUNT(*) c FROM files GROUP BY chksum HAVING c > 1;")
+	cur.execute("SELECT chksumfull, COUNT(*) c FROM files WHERE chksumfull != '' GROUP BY chksum HAVING c > 1")
 	results = cur.fetchall()
 	for result in results:
 		dupscur = conn.cursor()
-		dupscur.execute("select file from files where chksum = '"+ result[0]+"';")
+		dupscur.execute("SELECT file FROM files WHERE chksumfull = ?", (result[0],) )
 		#Get all duplicate files
 		dupesResults = dupscur.fetchall()
 		fileIndex = 0 

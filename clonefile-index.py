@@ -14,7 +14,7 @@ threads = input("Number of Threads to use: ")
 
 conn = sqlite3.connect('clonefile-index.sqlite')
 c = conn.cursor()
-c.execute('''CREATE TABLE files (file, chksum)''')
+c.execute('''CREATE TABLE files (file, chksum64k, chksumfull, size)''')
 
 def processFile(filelink):
 	try: 
@@ -26,28 +26,34 @@ def processFile(filelink):
 		if (os.path.getsize(filelink) > 1024):
 			try:
 				shahash = getSHA256(filelink).split()[0]
-				file_info = [filelink,shahash]
+				file_info = [filelink,shahash,os.path.getsize(filelink)]
 				return file_info
 			except Exception as e: 
 				print(f"Couldn\'t index {filelink}: {e}")
 
-def getSHA256(currentFile):
+def processFileFull(filelink):
+	shahash = getSHA256(filelink, full=True).split()[0]
+	file_info = [shahash,filelink]
+	return file_info
+
+def getSHA256(currentFile, full=False):
 	#Read the 64k at a time, hash the buffer & repeat till finished. 
+	#By default only checksum the first block
 	BLOCKSIZE = 65536
 	hasher = hashlib.sha256()
 	with open(currentFile, 'rb') as file:
 		buf = file.read(BLOCKSIZE)
 		while len(buf) > 0:
 			hasher.update(buf)
+			if not full:
+				break
 			buf = file.read(BLOCKSIZE)
 	return hasher.hexdigest()
 
 def add2sqlite(fileinfo):
 	for f in fileinfo:
 		if (f != None):
-			file_link = f[0]
-			file_hash = f[1]
-			c.execute("INSERT INTO files (file, chksum) VALUES ('"+file_link.replace('\'', "\'\'") +"', '"+file_hash+"');")
+			c.execute("INSERT INTO files (file, chksum64k, chksumfull, size) VALUES (?,?,'',?)", (f[0], f[1], f[2]))
 
 # Index all files from within the root
 #start script
@@ -55,6 +61,7 @@ if __name__ == '__main__':
 	allfiles = []
 	sqlite_data = []
 	print(f"Indexing files in {os.getcwd()}")
+	print(f"Reading file list")
 	for dirpath, dirnames, filenames in os.walk("."):
 		for filename in [f for f in filenames]:
 			filelink =  os.path.join(dirpath, filename)
@@ -62,11 +69,42 @@ if __name__ == '__main__':
 				allfiles.append(filelink)
 	num_of_files = len(allfiles)
 	# "threads" at a time, multiprocess delegation
-	print("Processing " + str(num_of_files) + " files")
+	print(f'Checksumming {num_of_files} files (fast)')
 	with Pool(int(threads)) as pool:
 		r = list(tqdm(pool.imap_unordered(processFile, allfiles), total = num_of_files))
 	#process (r)esults by adding them to sqlite 
 	add2sqlite(r)
+
+	conn.commit()
+	print('Indexing database')
+	c.execute('''CREATE INDEX index64k ON files(chksum64k ASC)''')
+	c.execute('''CREATE INDEX indexfile ON files(file ASC)''')
+	c.execute('''CREATE INDEX indexsize ON files(size ASC)''')
+
+	c.execute('''SELECT chksum64k, COUNT(*) c FROM files GROUP BY chksum64k HAVING c > 1''')
+	results = c.fetchall()
+
+	allfiles = []
+	sqlite_data = []
+
+	print(f'Found {len(results)} candidates, fetching files')
+	for result in tqdm(results):
+		c.execute("SELECT file FROM files WHERE chksum64k = ?", (result[0],))
+		for f in c.fetchall():
+			allfiles.append(f[0])
+
+	num_of_files = len(allfiles)
+	print("Processing {num_of_files} files")
+	with Pool(int(threads)) as pool:
+		r = list(tqdm(pool.imap_unordered(processFileFull, allfiles), total = num_of_files))
+
+	print("Updating database")
+	for x in tqdm(r):
+		c.execute("UPDATE files SET chksumfull = ? WHERE file = ?", x )
+
+	conn.commit()
+	print('Indexing database')
+	c.execute('''CREATE INDEX indexfull ON files(chksum64k ASC, chksumfull ASC)''')
 
 conn.commit()
 conn.close()

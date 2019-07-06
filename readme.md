@@ -17,7 +17,7 @@ Instructions:
 
 1. Run `clonefile-index.py` which will create an `index.sqlite` database with all of the files and chksums at the scriptroot. 
 2. Run `clonefile-dedup.py` which will copy the first instance of a file to all of the other instances using the 'clonefile' syscall. This isn't a link but an APFS reference to the same data on the drive that is used by a file with that chksum. 
-3. (optional) Run `clonefile-verify.py` to verify that the files bear the same chksum after as they did before the process. If you use Spotlight on this drive, it will definitely display an error on these files. 
+3. (optional) Run `clonefile-verify.py` to verify that the files bear the same chksum after as they did before the process. If you use Spotlight on this drive, it will definitely display an error on the Spotlight metadata files. 
 
 Let me know how it works out for you! 
 Twitter: @ranvel
