@@ -8,7 +8,7 @@ Normal deduplication is done at the block level and requires a special filesyste
 
 You'll need:
  - python 3.6
- - python sqlite3 & tqdm module
+ - python sqlite3, tqdm and xattr modules
  - a Mac with APFS (to utilize the clonefile syscall)
 
 This program could easily be combined into one program, but it's not a lot of work to run this as separate scripts, so I will leave it as is. 
@@ -17,7 +17,7 @@ Instructions:
 
 1. Run `clonefile-index.py` which will create an `index.sqlite` database with all of the files and chksums at the scriptroot. 
 2. Run `clonefile-dedup.py` which will copy the first instance of a file to all of the other instances using the 'clonefile' syscall. This isn't a link but an APFS reference to the same data on the drive that is used by a file with that chksum. 
-3. (optional) Run `clonefile-verify.py` to verify that the files bear the same chksum after as they did before the process. If you use Spotlight on this drive, it will definitely display an error on these files. 
+3. (optional) Run `clonefile-verify.py` to verify that the files bear the same chksum after as they did before the process. If you use Spotlight on this drive, it will definitely display an error on the Spotlight metadata files. 
 
 Let me know how it works out for you! 
 Twitter: @ranvel
